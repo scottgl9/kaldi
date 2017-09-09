@@ -44,23 +44,35 @@ srilm_opts="-subset -prune-lowprobs -unk -tolower -order 3"
 if [ $stage -le 1 ]; then
   mkdir -p data/local
   # ami
-  local/ami_text_prep.sh data/local/ami/downloads
-  local/ami_ihm_data_prep.sh $ami
+  if [ ! -d data/local/downloads ]; then
+    local/ami_text_prep.sh data/local/ami/downloads
+    local/ami_ihm_data_prep.sh $ami
+  fi
   #local/ami_sdm_data_prep.sh $ami 1
   # fisher
-  local/fisher_data_prep.sh $fisher
-  utils/fix_data_dir.sh data/fisher/train
+  #local/fisher_data_prep.sh $fisher
+  #utils/fix_data_dir.sh data/fisher/train
   # swbd
   #local/swbd1_data_download.sh $swbd
   #local/swbd1_data_prep.sh $swbd
   #utils/fix_data_dir.sh data/swbd/train
   # librispeech
-  local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-clean-100 data/librispeech_100/train
-  local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-clean-360 data/librispeech_360/train
-  local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-other-500 data/librispeech_500/train
-  local/librispeech_data_prep.sh $librispeech/LibriSpeech/test-clean data/librispeech/test
+  if [ ! -d data/librispeech_100/train ]; then
+    local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-clean-100 data/librispeech_100/train
+  fi
+  if [ ! -d data/librispeech_360/train ]; then
+    local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-clean-360 data/librispeech_360/train
+  fi
+  if [ ! -d data/librispeech_500/train ]; then
+    local/librispeech_data_prep.sh $librispeech/LibriSpeech/train-other-500 data/librispeech_500/train
+  fi
+  if [ ! -d data/librispeech/test ]; then
+    local/librispeech_data_prep.sh $librispeech/LibriSpeech/test-clean data/librispeech/test
+  fi
   # tedlium
-  local/tedlium_prepare_data.sh $tedlium2
+  if [ ! -d data/tedlium ]; then
+    local/tedlium_prepare_data.sh $tedlium2
+  fi
   # wsj
   #local/wsj_data_prep.sh $wsj0/??-{?,??}.? $wsj1/??-{?,??}.?
   #local/wsj_format_data.sh
@@ -100,18 +112,26 @@ fi
 
 # prepare (and validate) lang directory
 if [ $stage -le 5 ]; then
-  rm -f data/local/dict_nosp/lexiconp.txt  # will be created
-  utils/prepare_lang.sh data/local/dict_nosp "<unk>" data/local/tmp/lang_nosp data/lang_nosp
+  if [ ! -d data/lang_nosp ]; then
+    rm -f data/local/dict_nosp/lexiconp.txt  # will be created
+    utils/prepare_lang.sh data/local/dict_nosp "<unk>" data/local/tmp/lang_nosp data/lang_nosp
+  else
+    echo "data/lang_nosp already exists, skipping."
+  fi
 fi
 
 # prepare LM and test lang directory
 if [ $stage -le 6 ]; then
-  mkdir -p data/local/lm
-  cat data/{fisher,swbd}/train/text > data/local/lm/text
-  local/train_lms.sh  # creates data/local/lm/3gram-mincount/lm_unpruned.gz
-  utils/format_lm_sri.sh --srilm-opts "$srilm_opts" \
-    data/lang_nosp data/local/lm/3gram-mincount/lm_unpruned.gz \
-    data/local/dict_nosp/lexicon.txt data/lang_nosp_fsh_sw1_tg
+  if [ ! -d data/local/lm ]; then
+    mkdir -p data/local/lm
+    cat data/{fisher,swbd}/train/text > data/local/lm/text
+    local/train_lms.sh  # creates data/local/lm/3gram-mincount/lm_unpruned.gz
+    utils/format_lm_sri.sh --srilm-opts "$srilm_opts" \
+      data/lang_nosp data/local/lm/3gram-mincount/lm_unpruned.gz \
+      data/local/dict_nosp/lexicon.txt data/lang_nosp_fsh_sw1_tg
+  else
+    echo "data/local/lm already exists, skipping."
+  fi
 fi
 
 # make training features
@@ -119,12 +139,14 @@ if [ $stage -le 7 ]; then
   mfccdir=mfcc
   corpora="ami_ihm librispeech_100 librispeech_360 librispeech_500 tedlium"
   for c in $corpora; do
-    data=data/$c/train
-    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf \
-      --cmd "$train_cmd" --nj 40 \
-      $data exp/make_mfcc/$c/train || exit 1;
-    steps/compute_cmvn_stats.sh \
-      $data exp/make_mfcc/$c/train || exit 1;
+    if [ ! -d exp/make_mfcc/$c/train ]; then
+      data=data/$c/train
+      steps/make_mfcc.sh --mfcc-config conf/mfcc.conf \
+        --cmd "$train_cmd" --nj 40 \
+        $data exp/make_mfcc/$c/train || exit 1;
+      steps/compute_cmvn_stats.sh \
+        $data exp/make_mfcc/$c/train || exit 1;
+     fi
   done
 fi
 
@@ -180,99 +202,140 @@ fi
 
 # train mono (monophone system)
 if [ $stage -le 11 ]; then
-  local/make_partitions.sh --multi $multi --stage 1 || exit 1;
-  steps/train_mono.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
-    data/$multi/mono data/lang_nosp exp/$multi/mono || exit 1;
+  if [ ! -d exp/$multi/mono ]; then
+    local/make_partitions.sh --multi $multi --stage 1 || exit 1;
+    steps/train_mono.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
+      data/$multi/mono data/lang_nosp exp/$multi/mono || exit 1;
+  else
+    echo "exp/$multi/mono already exists, skipping."
+  fi
 fi
 
 # train tri1 (first triphone pass)
 if [ $stage -le 12 ]; then
-  local/make_partitions.sh --multi $multi --stage 2 || exit 1;
-  steps/align_si.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
-    data/$multi/mono_ali data/lang_nosp exp/$multi/mono exp/$multi/mono_ali || exit 1;
-  steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" 2000 10000 \
-    data/$multi/tri1 data/lang_nosp exp/$multi/mono_ali exp/$multi/tri1 || exit 1;
+  if [ ! -d exp/$multi/tri1 ]; then
+    local/make_partitions.sh --multi $multi --stage 2 || exit 1;
+    steps/align_si.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
+      data/$multi/mono_ali data/lang_nosp exp/$multi/mono exp/$multi/mono_ali || exit 1;
+    steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" 2000 10000 \
+      data/$multi/tri1 data/lang_nosp exp/$multi/mono_ali exp/$multi/tri1 || exit 1;
+  else
+    echo "exp/$multi/tri1 already exists, skipping."
+  fi
 fi
 
 # train tri2 (LDA+MLLT)
 if [ $stage -le 13 ]; then
-  local/make_partitions.sh --multi $multi --stage 3 || exit 1;
-  steps/align_si.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
-    data/$multi/tri1_ali data/lang_nosp exp/$multi/tri1 exp/$multi/tri1_ali || exit 1;
-  steps/train_lda_mllt.sh --cmd "$train_cmd" \
-    --splice-opts "--left-context=3 --right-context=3" 3500 30000 \
-    data/$multi/tri2 data/lang_nosp exp/$multi/tri1_ali exp/$multi/tri2 || exit 1;
+  if [ ! -d exp/$multi/tri2 ]; then
+    local/make_partitions.sh --multi $multi --stage 3 || exit 1;
+    steps/align_si.sh --boost-silence 1.25 --nj 20 --cmd "$train_cmd" \
+      data/$multi/tri1_ali data/lang_nosp exp/$multi/tri1 exp/$multi/tri1_ali || exit 1;
+    steps/train_lda_mllt.sh --cmd "$train_cmd" \
+      --splice-opts "--left-context=3 --right-context=3" 3500 30000 \
+      data/$multi/tri2 data/lang_nosp exp/$multi/tri1_ali exp/$multi/tri2 || exit 1;
+  else
+    echo "exp/$multi/tri2 already exists, skipping."
+  fi
 fi
 
 # train tri3 (LDA+MLLT on more data)
 if [ $stage -le 14 ]; then
-  local/make_partitions.sh --multi $multi --stage 4 || exit 1;
-  steps/align_si.sh --cmd "$train_cmd" --nj 30 \
-    data/$multi/tri2_ali data/lang_nosp \
-    exp/$multi/tri2 exp/$multi/tri2_ali  || exit 1;
-  steps/train_lda_mllt.sh --cmd "$train_cmd" 8000 200000 \
-    data/$multi/tri3 data/lang_nosp exp/$multi/tri2_ali exp/$multi/tri3 || exit 1;
+  if [ ! -d exp/$multi/tri2 ]; then
+    local/make_partitions.sh --multi $multi --stage 4 || exit 1;
+    steps/align_si.sh --cmd "$train_cmd" --nj 30 \
+      data/$multi/tri2_ali data/lang_nosp \
+      exp/$multi/tri2 exp/$multi/tri2_ali  || exit 1;
+    steps/train_lda_mllt.sh --cmd "$train_cmd" 8000 200000 \
+      data/$multi/tri3 data/lang_nosp exp/$multi/tri2_ali exp/$multi/tri3 || exit 1;
+  else
+    echo "exp/$multi/tri3 already exists, skipping."
+  fi
 fi
 
 # reestimate LM with silprobs
 if [ $stage -le 15 ]; then
-  steps/get_prons.sh --cmd "$train_cmd" data/$multi/tri3 data/lang_nosp exp/$multi/tri3
-  utils/dict_dir_add_pronprobs.sh --max-normalize true \
-    data/local/dict_nosp exp/$multi/tri3/pron_counts_nowb.txt \
-    exp/$multi/tri3/sil_counts_nowb.txt exp/$multi/tri3/pron_bigram_counts_nowb.txt data/local/dict
-  utils/prepare_lang.sh data/local/dict "<unk>" data/local/lang data/lang
-  utils/format_lm_sri.sh --srilm-opts "$srilm_opts" \
-    data/lang data/local/lm/3gram-mincount/lm_unpruned.gz \
-    data/local/dict/lexicon.txt data/lang_fsh_sw1_tg
+  if [ ! -d data/lang_fsh_sw1_tg ]; then
+    steps/get_prons.sh --cmd "$train_cmd" data/$multi/tri3 data/lang_nosp exp/$multi/tri3
+    utils/dict_dir_add_pronprobs.sh --max-normalize true \
+      data/local/dict_nosp exp/$multi/tri3/pron_counts_nowb.txt \
+      exp/$multi/tri3/sil_counts_nowb.txt exp/$multi/tri3/pron_bigram_counts_nowb.txt data/local/dict
+    utils/prepare_lang.sh data/local/dict "<unk>" data/local/lang data/lang
+    utils/format_lm_sri.sh --srilm-opts "$srilm_opts" \
+      data/lang data/local/lm/3gram-mincount/lm_unpruned.gz \
+      data/local/dict/lexicon.txt data/lang_fsh_sw1_tg
+  else
+    echo "data/lang_fsh_sw1_tg already exists, skipping."
+  fi
 fi
 
 # train tri4 (SAT on almost all data)
 if [ $stage -le 16 ]; then
-  local/make_partitions.sh --multi $multi --stage 5 || exit 1;
-  steps/align_fmllr.sh --cmd "$train_cmd" --nj 60 \
-    data/$multi/tri3_ali data/lang \
-    exp/$multi/tri3 exp/$multi/tri3_ali || exit 1;
-  steps/train_sat.sh --cmd "$train_cmd" 11500 800000 \
-    data/$multi/tri4 data/lang exp/$multi/tri3_ali exp/$multi/tri4 || exit 1;
+  if [ ! -d exp/$multi/tri4 ]; then
+    local/make_partitions.sh --multi $multi --stage 5 || exit 1;
+    steps/align_fmllr.sh --cmd "$train_cmd" --nj 60 \
+      data/$multi/tri3_ali data/lang \
+      exp/$multi/tri3 exp/$multi/tri3_ali || exit 1;
+    steps/train_sat.sh --cmd "$train_cmd" 11500 800000 \
+      data/$multi/tri4 data/lang exp/$multi/tri3_ali exp/$multi/tri4 || exit 1;
+  else
+    echo "exp/$multi/tri4 already exists, skipping."
+  fi
 fi
 
 # decode
 if [ $stage -le 17 ]; then
-  graph_dir=exp/$multi/tri4/graph_tg
-  utils/mkgraph.sh data/lang_fsh_sw1_tg \
-    exp/$multi/tri4 $graph_dir || exit 1;
-  for e in librispeech; do
-    steps/decode_fmllr.sh --nj 25 --cmd "$decode_cmd" --config conf/decode.config $graph_dir \
-      data/$e/test exp/$multi/tri4/decode_tg_$e || exit 1;
-  done
+  if [ ! -d exp/$multi/tri4 ]; then
+    graph_dir=exp/$multi/tri4/graph_tg
+    utils/mkgraph.sh data/lang_fsh_sw1_tg \
+      exp/$multi/tri4 $graph_dir || exit 1;
+    for e in librispeech; do
+      steps/decode_fmllr.sh --nj 25 --cmd "$decode_cmd" --config conf/decode.config $graph_dir \
+        data/$e/test exp/$multi/tri4/decode_tg_$e || exit 1;
+    done
+  else
+    echo "exp/$multi/tri4/decode_tg_$e already exists, skipping."
+  fi
 fi
 
 # train tri5 (SAT on all data but ami_sdm)
 if [ $stage -le 18 ]; then
-  local/make_partitions.sh --multi $multi --stage 6 || exit 1;
-  steps/align_fmllr.sh --cmd "$train_cmd" --nj 100 \
-    data/$multi/tri4_ali data/lang \
-    exp/$multi/tri4 exp/$multi/tri4_ali || exit 1;
-  steps/train_sat.sh --cmd "$train_cmd" 11500 2000000 \
-    data/$multi/tri5 data/lang exp/$multi/tri4_ali exp/$multi/tri5 || exit 1;
+  if [ ! -d exp/$multi/tri5 ]; then
+    local/make_partitions.sh --multi $multi --stage 6 || exit 1;
+    steps/align_fmllr.sh --cmd "$train_cmd" --nj 100 \
+      data/$multi/tri4_ali data/lang \
+      exp/$multi/tri4 exp/$multi/tri4_ali || exit 1;
+    steps/train_sat.sh --cmd "$train_cmd" 11500 2000000 \
+      data/$multi/tri5 data/lang exp/$multi/tri4_ali exp/$multi/tri5 || exit 1;
+  else
+    echo "exp/$multi/tri5 already exists, skipping."
+  fi
 fi
 
 # decode
 if [ $stage -le 19 ]; then
-  graph_dir=exp/$multi/tri5/graph_tg
-  utils/mkgraph.sh data/lang_fsh_sw1_tg \
-    exp/$multi/tri5 $graph_dir || exit 1;
-  for e in librispeech; do
-    steps/decode_fmllr.sh --nj 25 --cmd "$decode_cmd" --config conf/decode.config $graph_dir \
-      data/$e/test exp/$multi/tri5/decode_tg_$e || exit 1;
-  done
+  if [ ! -d exp/$multi/tri5/decode_tg_$e ]; then
+    graph_dir=exp/$multi/tri5/graph_tg
+    utils/mkgraph.sh data/lang_fsh_sw1_tg \
+      exp/$multi/tri5 $graph_dir || exit 1;
+    for e in librispeech; do
+      steps/decode_fmllr.sh --nj 25 --cmd "$decode_cmd" --config conf/decode.config $graph_dir \
+        data/$e/test exp/$multi/tri5/decode_tg_$e || exit 1;
+    done
+  else
+    echo "exp/$multi/tri5/decode_tg_$e already exists, skipping."
+
+  fi
 fi
 
 # train tdnn
 if [ $stage -le 20 ]; then
+  if [ ! -d exp/$multi/tri5_ali ]; then
   local/make_partitions.sh --multi $multi --stage 7 || exit 1;
   steps/align_fmllr.sh --cmd "$train_cmd" --nj 100 \
     data/$multi/tri5_ali data/lang \
     exp/$multi/tri5 exp/$multi/tri5_ali || exit 1;
   local/nnet3/run_tdnn.sh --multi $multi
+  else
+    echo "exp/$multi/tri5_ali already exists, skipping."
+  fi
 fi
