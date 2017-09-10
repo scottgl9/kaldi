@@ -31,6 +31,8 @@ $jobstart = 1;
 $jobend = 1;
 $ignored_opts = ""; # These will be ignored.
 
+$using_gpu = 1 if -f "/usr/bin/nvidia-smi";
+
 # First parse an option like JOB=1:4, and any
 # options that would normally be given to
 # queue.pl, which we will just discard.
