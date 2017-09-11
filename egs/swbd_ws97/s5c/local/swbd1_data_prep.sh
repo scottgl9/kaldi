@@ -59,13 +59,14 @@ n=`cat $dir/sph.flist | wc -l`
 # make everything lowercase here. This is because we will be using SRILM which
 # can optionally make everything lowercase (but not uppercase) when mapping 
 # LM vocabs.
-awk '{ 
-       name=substr($1,1,6); gsub("^sw","sw0",name); side=substr($1,7,1); 
-       stime=$2; etime=$3;
-       printf("%s-%s_%06.0f-%06.0f", 
-              name, side, int(100*stime+0.5), int(100*etime+0.5));
-       for(i=4;i<=NF;i++) printf(" %s", $i); printf "\n"
-}' $dir/swb_ms98_transcriptions/*/*/*-trans.text  > $dir/transcripts1.txt
+#awk '{ 
+#       name=substr($1,1,6); gsub("^sw","sw0",name); side=substr($1,7,1); 
+#       stime=$2; etime=$3;
+#       printf("%s-%s_%06.0f-%06.0f", 
+#              name, side, int(100*stime+0.5), int(100*etime+0.5));
+#       for(i=4;i<=NF;i++) printf(" %s", $i); printf "\n"
+#}' $dir/swb_ms98_transcriptions/*/*/*-trans.text  > $dir/transcripts1.txt
+find $SWBD_DIR -type f -name '*.trans.text' -exec cat {} \; > $dir/transcripts1.txt
 
 # test if trans. file is sorted
 export LC_ALL=C;

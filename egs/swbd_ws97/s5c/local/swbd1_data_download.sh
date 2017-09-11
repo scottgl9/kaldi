@@ -30,9 +30,9 @@ mkdir -p $dir
 #fi  
 echo $dir
 # Trans directory check
-if [ ! -f $dir/switchboard_icsi_ws97.tar.gz ]; then
+if [ ! -f $SWBD_DIR/switchboard_icsi_ws97.tar.gz ]; then
   ( 
-    cd $dir;
+    cd $SWBD_DIR;
     if [ ! -d "train-ws97-i" ]; then
       echo " *** Downloading trascriptions and dictionary ***" 
       wget https://www.isip.piconepress.com/projects/switchboard/releases/switchboard_icsi_ws97.tar.gz
@@ -45,10 +45,16 @@ if [ ! -f $dir/switchboard_icsi_ws97.tar.gz ]; then
   )
 else
   echo "Directory with transcriptions exists, skipping downloading"
-  tar -xf switchboard_icsi_ws97.tar.gz
-  rm -rf $dir/*/com $dir/*/file_generation $dir/*/lexicon $dir/*/mfc $dir/*/mlf $dir/*/phn $dir/*/syl $dir/*/wrd
-  mkdir $dir/annot
-  cd $dir/annot; tar -xf ../swb1_dialogact_annot.tar.gz
+  tar -xf $SWBD_DIR/switchboard_icsi_ws97.tar.gz -C $SWBD_DIR #&& rm -rf ./*/com ./*/file_generation ./*/lexicon ./*/mfc ./*/mlf ./*/phn ./*/syl ./*/wrd
+  #mkdir -p annot
+  #cd annot; tar -xf ../swb1_dialogact_annot.tar.gz
   #[ -f "$dir/train-ws97-i" ] \
   #  || ln -sf $SWBD_DIR/transcriptions/swb_ms98_transcriptions $dir/
+fi
+
+if [ ! -d $SWBD_DIR/swb_ms98_transcriptions ]; then
+  mkdir -p $SWBD_DIR/swb_ms98_transcriptions
+
+  # create sw-ms98-dict.text
+  find $SWBD_DIR -type f -name '*.syl' -exec "cat {}" \; > $SWBD_DIR/swb_ms98_transcriptions/sw-ms98-dict.text
 fi

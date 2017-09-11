@@ -384,7 +384,7 @@ while [ $x -lt $num_iters ]; do
       perturb_opts="--target-objf-change=$target_objf_change --within-covar=$dir/within_covar.spmat"
     fi
 
-    $cmd $parallel_opts JOB=1:$num_jobs_nnet $dir/log/train.$x.JOB.log \
+    $cmd JOB=1:$num_jobs_nnet $dir/log/train.$x.JOB.log $parallel_opts \
       nnet-shuffle-egs --buffer-size=$shuffle_buffer_size --srand=$x \
       ark:$egs_dir/egs.JOB.$[$x%$iters_per_epoch].ark ark:- \| \
        nnet-train$parallel_suffix$perturb_suffix $parallel_train_opts $perturb_opts \

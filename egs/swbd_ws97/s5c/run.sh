@@ -11,7 +11,8 @@
 
 set -e # exit on error
 has_fisher=false
-local/swbd1_data_download.sh /export/corpora3/LDC/LDC97S62
+mkdir -p data/swbd
+local/swbd1_data_download.sh data/swbd
 # local/swbd1_data_download.sh /mnt/matylda2/data/SWITCHBOARD_1R2 # BUT,
 
 # prepare SWBD dictionary first since we want to find acronyms according to pronunciations
@@ -27,7 +28,7 @@ local/swbd1_prepare_dict.sh
 # Note: if you are using this link, make sure you rename conv_tab.csv to conv.tab
 # after downloading.
 # Usage: local/swbd1_data_prep.sh /path/to/SWBD [/path/to/SWBD_docs]
-local/swbd1_data_prep.sh /export/corpora3/LDC/LDC97S62
+local/swbd1_data_prep.sh data/swbd
 # local/swbd1_data_prep.sh /home/dpovey/data/LDC97S62
 # local/swbd1_data_prep.sh /data/corpora0/LDC97S62
 # local/swbd1_data_prep.sh /mnt/matylda2/data/SWITCHBOARD_1R2 # BUT,
