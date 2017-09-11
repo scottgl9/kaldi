@@ -28,6 +28,9 @@ decode_nj=30   # note: should not be >38 which is the number of speakers in the 
                # after applying --seconds-per-spk-max 180.  We decode with 4 threads, so
                # this will be too many jobs if you're using run.pl.
 stage=0
+if [ -f data/current_stage.txt ]; then
+  stage=`cat  data/current_stage.txt`
+fi
 
 . utils/parse_options.sh # accept options
 
@@ -35,6 +38,8 @@ stage=0
 if [ $stage -le 0 ]; then
   local/download_data.sh
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 1 ]; then
   local/prepare_data.sh
@@ -47,14 +52,20 @@ if [ $stage -le 1 ]; then
   done
 fi
 
+echo $stage > data/current_stage.txt
+
 if [ $stage -le 2 ]; then
   local/prepare_dict.sh
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 3 ]; then
   utils/prepare_lang.sh data/local/dict_nosp \
     "<unk>" data/local/lang_nosp data/lang_nosp
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 4 ]; then
   # later on we'll change this script so you have the option to
@@ -63,9 +74,13 @@ if [ $stage -le 4 ]; then
   local/ted_train_lm.sh
 fi
 
+echo $stage > data/current_stage.txt
+
 if [ $stage -le 5 ]; then
   local/format_lms.sh
 fi
+
+echo $stage > data/current_stage.txt
 
 # Feature extraction
 if [ $stage -le 6 ]; then
@@ -76,6 +91,8 @@ if [ $stage -le 6 ]; then
   done
 fi
 
+echo $stage > data/current_stage.txt
+
 # Now we have 212 hours of training data.
 # Well create a subset with 10k short segments to make flat-start training easier:
 if [ $stage -le 7 ]; then
@@ -83,11 +100,15 @@ if [ $stage -le 7 ]; then
   utils/data/remove_dup_utts.sh 10 data/train_10kshort data/train_10kshort_nodup
 fi
 
+echo $stage > data/current_stage.txt
+
 # Train
 if [ $stage -le 8 ]; then
   steps/train_mono.sh --nj 20 --cmd "$train_cmd" \
     data/train_10kshort_nodup data/lang_nosp exp/mono
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 9 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
@@ -95,6 +116,8 @@ if [ $stage -le 9 ]; then
   steps/train_deltas.sh --cmd "$train_cmd" \
     2500 30000 data/train data/lang_nosp exp/mono_ali exp/tri1
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 10 ]; then
   utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
@@ -109,6 +132,8 @@ if [ $stage -le 10 ]; then
   done
 fi
 
+echo $stage > data/current_stage.txt
+
 if [ $stage -le 11 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri1 exp/tri1_ali
@@ -116,6 +141,8 @@ if [ $stage -le 11 ]; then
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     4000 50000 data/train data/lang_nosp exp/tri1_ali exp/tri2
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 12 ]; then
   utils/mkgraph.sh data/lang_nosp exp/tri2 exp/tri2/graph_nosp
@@ -127,6 +154,8 @@ if [ $stage -le 12 ]; then
   done
 fi
 
+echo $stage > data/current_stage.txt
+
 if [ $stage -le 13 ]; then
   steps/get_prons.sh --cmd "$train_cmd" data/train data/lang_nosp exp/tri2
   utils/dict_dir_add_pronprobs.sh --max-normalize true \
@@ -134,6 +163,8 @@ if [ $stage -le 13 ]; then
     exp/tri2/sil_counts_nowb.txt \
     exp/tri2/pron_bigram_counts_nowb.txt data/local/dict
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 14 ]; then
   utils/prepare_lang.sh data/local/dict "<unk>" data/local/lang data/lang
@@ -150,6 +181,8 @@ if [ $stage -le 14 ]; then
        data/${dset} exp/tri2/decode_${dset} exp/tri2/decode_${dset}_rescore
   done
 fi
+
+echo $stage > data/current_stage.txt
 
 if [ $stage -le 15 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
@@ -168,6 +201,8 @@ if [ $stage -le 15 ]; then
   done
 fi
 
+echo $stage > data/current_stage.txt
+
 # the following shows you how to insert a phone language model in place of <unk>
 # and decode with that.
 # local/run_unk_model.sh
@@ -179,6 +214,7 @@ if [ $stage -le 16 ]; then
   local/run_cleanup_segmentation.sh
 fi
 
+echo $stage > data/current_stage.txt
 
 # TODO: xiaohui-zhang will add lexicon cleanup at some point.
 
@@ -187,6 +223,8 @@ if [ $stage -le 17 ]; then
   # you to have the queue set up the right way... see kaldi-asr.org/doc/queue.html)
   local/chain/run_tdnn.sh
 fi
+
+echo $stage > data/current_stage.txt
 
 # The nnet3 TDNN recipe:
 # local/nnet3/run_tdnn.sh
