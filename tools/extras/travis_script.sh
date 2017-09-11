@@ -74,7 +74,7 @@ cd ..
 runvx cd src
 runvx touch base/.depend.mk  # Fool make depend into skipping the dependency step.
 runvx touch .short_version   # Make version short, or else ccache will miss everything.
-runvx "$CCC" CXXFLAGS="$CF" LDFLAGS="$LDF" ./configure --shared --use-cuda=no "$DPF" --mathlib=OPENBLAS --openblas-root="$XROOT/usr"
+runvx "$CCC" CXXFLAGS="$CF" LDFLAGS="$LDF" ./configure --shared --use-cuda=yes "$DPF" --mathlib=OPENBLAS --openblas-root="$XROOT/usr"
 runvx make -j$MAXPAR $CI_TARGETS CI_NOLINKBINARIES=1
 
 # Travis has a 10k line log limit, so use smaller CI_TARGETS when logging.
