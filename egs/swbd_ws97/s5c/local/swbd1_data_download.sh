@@ -52,9 +52,11 @@ else
   #  || ln -sf $SWBD_DIR/transcriptions/swb_ms98_transcriptions $dir/
 fi
 
-if [ ! -d $SWBD_DIR/swb_ms98_transcriptions ]; then
+#if [ ! -d $SWBD_DIR/swb_ms98_transcriptions ]; then
   mkdir -p $SWBD_DIR/swb_ms98_transcriptions
-
   # create sw-ms98-dict.text
-  find $SWBD_DIR -type f -name '*.syl' -exec "cat {}" \; > $SWBD_DIR/swb_ms98_transcriptions/sw-ms98-dict.text
-fi
+  #find $SWBD_DIR -type f -name '*.syl' -exec cat {} \; | egrep -e "[0-9]\.([0-9]+)(\s+)([0-9]+) " > $SWBD_DIR/swb_ms98_transcriptions/sw-ms98-dict.text
+  find $SWBD_DIR -type f -name 'lexicon_v1_htk.text' -exec cat {} \; | tr '[:upper:]' '[:lower:]' > $SWBD_DIR/swb_ms98_transcriptions/sw-ms98-dict.text
+  rm -f `pwd`/data/local/train/swb_ms98_transcriptions
+  ln -s `pwd`/$SWBD_DIR/swb_ms98_transcriptions `pwd`/data/local/train/swb_ms98_transcriptions
+#fi

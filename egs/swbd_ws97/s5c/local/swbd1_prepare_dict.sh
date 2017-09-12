@@ -19,7 +19,7 @@ srcdict=$srcdir/swb_ms98_transcriptions/sw-ms98-dict.text
 [ ! -f "$srcdict" ] && echo "$0: No such file $srcdict" && exit 1;
 
 cp $srcdict $dir/lexicon0.txt || exit 1;
-patch <local/dict.patch $dir/lexicon0.txt || exit 1;
+#patch <local/dict.patch $dir/lexicon0.txt || exit 1;
 
 #(2a) Dictionary preparation:
 # Pre-processing (remove comments)
