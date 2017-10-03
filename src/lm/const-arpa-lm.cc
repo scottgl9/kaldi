@@ -953,15 +953,18 @@ void ConstArpaLm::WriteArpa(std::ostream &os) const {
   KALDI_ASSERT(initialized_);
 
   std::vector<ArpaLine> tmp_output;
+  std::cout << "num_words=" << num_words_ << std::endl;
   for (int32 i = 0; i < num_words_; ++i) {
     if (unigram_states_[i] != NULL) {
       std::vector<int32> seq(1, i);
+      std::cout << "WriteArpaRecurse(" << i << ")" << std::endl;
       WriteArpaRecurse(unigram_states_[i], seq, &tmp_output);
     }
   }
 
   // Sorts ArpaLines and collects head information.
   std::sort(tmp_output.begin(), tmp_output.end());
+  std::cout << "HERE1" << std::endl;
   std::vector<int32> ngram_count(1, 0);
   for (int32 i = 0; i < tmp_output.size(); ++i) {
     if (tmp_output[i].words.size() >= ngram_count.size()) {
@@ -972,12 +975,15 @@ void ConstArpaLm::WriteArpa(std::ostream &os) const {
     }
   }
 
+  std::cout << "HERE2" << std::endl;
   // Writes the header.
   os << std::endl;
   os << "\\data\\" << std::endl;
   for (int32 i = 1; i < ngram_count.size(); ++i) {
     os << "ngram " << i << "=" << ngram_count[i] << std::endl;
   }
+
+  std::cout << "HERE3" << std::endl;
 
   // Writes n-grams.
   int32 current_order = 0;
