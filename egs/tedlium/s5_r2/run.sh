@@ -37,9 +37,8 @@ fi
 # Data preparation
 if [ $stage -le 0 ]; then
   local/download_data.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 1 ]; then
   local/prepare_data.sh
@@ -50,37 +49,32 @@ if [ $stage -le 1 ]; then
   for dset in dev test train; do
     utils/data/modify_speaker_info.sh --seconds-per-spk-max 180 data/${dset}.orig data/${dset}
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 2 ]; then
   local/prepare_dict.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 3 ]; then
   utils/prepare_lang.sh data/local/dict_nosp \
     "<unk>" data/local/lang_nosp data/lang_nosp
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 4 ]; then
   # later on we'll change this script so you have the option to
   # download the pre-built LMs from openslr.org instead of building them
   # locally.
   local/ted_train_lm.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 5 ]; then
   local/format_lms.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # Feature extraction
 if [ $stage -le 6 ]; then
@@ -89,35 +83,31 @@ if [ $stage -le 6 ]; then
     steps/make_mfcc.sh --nj 30 --cmd "$train_cmd" $dir
     steps/compute_cmvn_stats.sh $dir
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # Now we have 212 hours of training data.
 # Well create a subset with 10k short segments to make flat-start training easier:
 if [ $stage -le 7 ]; then
   utils/subset_data_dir.sh --shortest data/train 10000 data/train_10kshort
   utils/data/remove_dup_utts.sh 10 data/train_10kshort data/train_10kshort_nodup
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # Train
 if [ $stage -le 8 ]; then
   steps/train_mono.sh --nj 20 --cmd "$train_cmd" \
     data/train_10kshort_nodup data/lang_nosp exp/mono
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 9 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/mono exp/mono_ali
   steps/train_deltas.sh --cmd "$train_cmd" \
     2500 30000 data/train data/lang_nosp exp/mono_ali exp/tri1
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 10 ]; then
   utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
@@ -130,9 +120,8 @@ if [ $stage -le 10 ]; then
     steps/lmrescore_const_arpa.sh  --cmd "$decode_cmd" data/lang_nosp data/lang_nosp_rescore \
        data/${dset} exp/tri1/decode_nosp_${dset} exp/tri1/decode_nosp_${dset}_rescore
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 11 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
@@ -140,9 +129,8 @@ if [ $stage -le 11 ]; then
 
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     4000 50000 data/train data/lang_nosp exp/tri1_ali exp/tri2
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 12 ]; then
   utils/mkgraph.sh data/lang_nosp exp/tri2 exp/tri2/graph_nosp
@@ -152,9 +140,8 @@ if [ $stage -le 12 ]; then
     steps/lmrescore_const_arpa.sh  --cmd "$decode_cmd" data/lang_nosp data/lang_nosp_rescore \
        data/${dset} exp/tri2/decode_nosp_${dset} exp/tri2/decode_nosp_${dset}_rescore
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 13 ]; then
   steps/get_prons.sh --cmd "$train_cmd" data/train data/lang_nosp exp/tri2
@@ -162,9 +149,8 @@ if [ $stage -le 13 ]; then
     data/local/dict_nosp exp/tri2/pron_counts_nowb.txt \
     exp/tri2/sil_counts_nowb.txt \
     exp/tri2/pron_bigram_counts_nowb.txt data/local/dict
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 14 ]; then
   utils/prepare_lang.sh data/local/dict "<unk>" data/local/lang data/lang
@@ -180,9 +166,8 @@ if [ $stage -le 14 ]; then
     steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" data/lang data/lang_rescore \
        data/${dset} exp/tri2/decode_${dset} exp/tri2/decode_${dset}_rescore
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 if [ $stage -le 15 ]; then
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
@@ -199,9 +184,8 @@ if [ $stage -le 15 ]; then
     steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" data/lang data/lang_rescore \
        data/${dset} exp/tri3/decode_${dset} exp/tri3/decode_${dset}_rescore
   done
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # the following shows you how to insert a phone language model in place of <unk>
 # and decode with that.
@@ -212,9 +196,8 @@ if [ $stage -le 16 ]; then
   # slightly, but the cleaned data should be useful when we add the neural net and chain
   # systems.  If not we'll remove this stage.
   local/run_cleanup_segmentation.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # TODO: xiaohui-zhang will add lexicon cleanup at some point.
 
@@ -222,9 +205,8 @@ if [ $stage -le 17 ]; then
   # This will only work if you have GPUs on your system (and note that it requires
   # you to have the queue set up the right way... see kaldi-asr.org/doc/queue.html)
   local/chain/run_tdnn.sh
+  echo $stage > data/current_stage.txt
 fi
-
-echo $stage > data/current_stage.txt
 
 # The nnet3 TDNN recipe:
 # local/nnet3/run_tdnn.sh
