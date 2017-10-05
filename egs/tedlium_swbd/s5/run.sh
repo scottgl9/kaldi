@@ -37,11 +37,13 @@ fi
 # Data preparation
 if [ $stage -le 0 ]; then
   local/download_data.sh
+  local/swbd1_data_download.sh
   echo $stage > data/current_stage.txt
 fi
 
 if [ $stage -le 1 ]; then
   local/prepare_data.sh
+  local/swbd1_merge.sh
   # Split speakers up into 3-minute chunks.  This doesn't hurt adaptation, and
   # lets us use more jobs for decoding etc.
   # [we chose 3 minutes because that gives us 38 speakers for the dev data, which is

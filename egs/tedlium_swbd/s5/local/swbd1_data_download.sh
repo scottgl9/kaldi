@@ -36,8 +36,8 @@ if [ ! -e switchboard_icsi_ws97 ]; then
   find switchboard_icsi_ws97 -name "*.sph" -exec mv {} sph \;
   mv sph switchboard_icsi_ws97/sph
   mkdir -p stm
-  find switchboard_icsi_ws97 -name "*trans.text" -exec mv {} stm \;
-  find switchboard_icsi_ws97 -name "lexicon_v1.sh" -exec mv {} stm \;
+  find switchboard_icsi_ws97 -name "*trans.text" -exec cp {} stm \;
+  find switchboard_icsi_ws97 -name "lexicon_v1.sh" -exec cp {} stm \;
 
   mv stm switchboard_icsi_ws97/stm
 
@@ -47,7 +47,10 @@ if [ ! -e switchboard_icsi_ws97 ]; then
   # find $SWBD_DIR -type f -name 'lexicon_v1_htk.text' -exec cat {} \; | tr '[:upper:]' '[:lower:]' > $SWBD_DIR/swb_ms98_transcriptions/sw-ms98-dict.text
 fi
 
-find switchboard_icsi_ws97 -type f -name "*trans.text" -exec cat {} \; | sed "s/\[/(/g" | sed "s/\]/)/g" | sed 's/\///g' | sed 's/"//g' | sed -r "s/([0-9]{4}[AB])([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)[(](\S*)[)]/\1 \8 \3 \5 \L\7/" > stm
+rm -f stm text segments utt2spk spk2utt wav.scp reco2file_and_channel
+find switchboard_icsi_ws97 -type f -name "*trans.text" -exec cat {} \; | sed "s/\[/(/g" | sed "s/\]/)/g" | sed 's/\///g' | sed 's/"//g' | sed -r "s/(\S*)-/\1/g" | sed "s/->//g" | sed -r "s/([0-9]{4}[AB])([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}<>!\(\),.\'\" ]*)[(](\S*)[)]/\1 \8 \3 \5 \L\7/" > stm
+sed -r -i "s/ws97-(\S)0/ws97-\1-0/g" stm
+sed -r -i "s/ws96-(\S)0/ws96-\1-0/g" stm
 sed -i 's/h# //g' stm
 sed -i 's/_#//g' stm
 sed -i 's/_?//g' stm
@@ -63,4 +66,18 @@ sed -i 's/ backgroundnoise / (backgroundnoise) /g' stm
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \9/" > text
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1/" > utt2spk
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1 \5 \7/" > segments
+sed -r -i "s/^([0-9]{4})A/\1A female/g" stm
+sed -r -i "s/^([0-9]{4})B/\1B male/g" stm
+cat stm | sed -r "s/([0-9]{4}[AB]) (\S*)([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*) ([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\1 A \4 \6 \8 <o,f0,\2> \9/" > stm2
+sed -r -i 's/\((\S*)\)/[\U\1]/g' stm2
+mv stm2 stm
+sed -r -i 's/\((\S*)\)/[\U\1]/g' text
+# Prepare 'segments', 'utt2spk', 'spk2utt'
+#cat text | cut -d" " -f 1 | awk -F"-" '{printf("%s %s %07.2f %07.2f\n", $0, $1, $2/100.0, $3/100.0)}' > segments
+#cat segments | awk '{print $1, $2}' > utt2spk
+cat utt2spk | ../utils/utt2spk_to_spk2utt.pl > spk2utt
+
+# Prepare 'wav.scp', 'reco2file_and_channel'
+cat utt2spk | awk -v set=$set -v pwd=$PWD '{ printf("%s sph2pipe -f wav -p %s/switchboard_icsi_ws97/sph/%s.sph |\n", $1, pwd, $1); }' > wav.scp
+cat wav.scp | awk '{ print $1, $1, "A"; }' > reco2file_and_channel
 
