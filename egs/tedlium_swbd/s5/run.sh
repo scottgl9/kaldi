@@ -34,6 +34,8 @@ fi
 
 . utils/parse_options.sh # accept options
 
+mkdir -p data
+
 # Data preparation
 if [ $stage -le 0 ]; then
   local/download_data.sh

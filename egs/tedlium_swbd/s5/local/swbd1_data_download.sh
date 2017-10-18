@@ -63,6 +63,24 @@ sed -i 's/ breath / (breath) /g' stm
 sed -i 's/ crosstalk / (crosstalk) /g' stm
 sed -i 's/ click / (click) /g' stm
 sed -i 's/ backgroundnoise / (backgroundnoise) /g' stm
+
+rm -f stm2
+# remove files which are not NIST SPHERE files
+cat stm | while read line
+do
+    name=`echo $line | cut -d ' ' -f 2`
+    filename=switchboard_icsi_ws97/sph/$name.sph
+    filetype=`file $filename`
+    if [ "$filetype" != "$filename: NIST SPHERE file" ]
+    then
+        rm -f $filename
+        continue
+    fi
+    echo $line >> stm2
+done
+
+mv stm2 stm
+
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \9/" > text
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1/" > utt2spk
 cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1 \5 \7/" > segments
