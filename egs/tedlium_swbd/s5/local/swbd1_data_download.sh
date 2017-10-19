@@ -64,7 +64,7 @@ sed -i 's/ crosstalk / (crosstalk) /g' stm
 sed -i 's/ click / (click) /g' stm
 sed -i 's/ backgroundnoise / (backgroundnoise) /g' stm
 
-rm -f stm2
+
 # remove files which are not NIST SPHERE files
 cat stm | while read line
 do
@@ -79,23 +79,24 @@ do
     echo $line >> stm2
 done
 
-mv stm2 stm
-
-cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \9/" > text
-cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1/" > utt2spk
-cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1 \5 \7/" > segments
-sed -r -i "s/^([0-9]{4})A/\1A female/g" stm
-sed -r -i "s/^([0-9]{4})B/\1B male/g" stm
-cat stm | sed -r "s/([0-9]{4}[AB]) (\S*)([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*) ([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\1 A \4 \6 \8 <o,f0,\2> \9/" > stm2
+#cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \9/" > text
+#cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1/" > utt2spk
+#cat stm | sed -r "s/([0-9]{4}[AB])([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*)([\t ]*)([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\3 \1 \5 \7/" > segments
+sed -r -i 's/^([0-9]{4})A/\1A female/g' stm2
+sed -r -i 's/^([0-9]{4})B/\1B male/g' stm2
+sed -r -i "s/([0-9]{4}[AB]) (\S*)([\t ]*)(\S*)([\t ]*)([0-9.]*)([\t ]*)([0-9.]*) ([A-Za-z0-9_\-\>\/@&#?{}!\(\),.\'\" ]*)/\1 A \4 \6 \8 <o,f0,\2> \9/" stm2
 sed -r -i 's/\((\S*)\)/[\U\1]/g' stm2
-mv stm2 stm
-sed -r -i 's/\((\S*)\)/[\U\1]/g' text
+sed -r -i 's/\[SIL\]//g' stm2
+cat stm2 | uniq -u > stm
+sort stm -o stm
+
+#sed -r -i 's/\((\S*)\)/[\U\1]/g' text
 # Prepare 'segments', 'utt2spk', 'spk2utt'
 #cat text | cut -d" " -f 1 | awk -F"-" '{printf("%s %s %07.2f %07.2f\n", $0, $1, $2/100.0, $3/100.0)}' > segments
 #cat segments | awk '{print $1, $2}' > utt2spk
-cat utt2spk | ../utils/utt2spk_to_spk2utt.pl > spk2utt
+#cat utt2spk | ../utils/utt2spk_to_spk2utt.pl > spk2utt
 
 # Prepare 'wav.scp', 'reco2file_and_channel'
-cat utt2spk | awk -v set=$set -v pwd=$PWD '{ printf("%s sph2pipe -f wav -p %s/switchboard_icsi_ws97/sph/%s.sph |\n", $1, pwd, $1); }' > wav.scp
-cat wav.scp | awk '{ print $1, $1, "A"; }' > reco2file_and_channel
+#cat utt2spk | awk -v set=$set -v pwd=$PWD '{ printf("%s sph2pipe -f wav -p %s/switchboard_icsi_ws97/sph/%s.sph |\n", $1, pwd, $1); }' > wav.scp
+#cat wav.scp | awk '{ print $1, $1, "A"; }' > reco2file_and_channel
 

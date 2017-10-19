@@ -38,7 +38,7 @@ if [ $# -ne 1 ]; then
 fi
 
 data=$1
-
+echo $data
 if [ ! -d $data ]; then
   echo "$0: no such directory $data"
   exit 1;
